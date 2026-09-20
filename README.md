@@ -19,10 +19,87 @@ Rules the code follows:
 5. Readiness is read from Kubernetes status. Nothing waits on a fixed sleep.
 6. Every create call tolerates "already exists", so provisioning can be re-run safely.
 7. Portable to any standard Kubernetes cluster. K3s is not a dependency.
+## Project Structure
 
-## Store lifecycle
+```text
+woocommerce-store-factory/
+├── backend/                         # FastAPI backend
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth.py              # Authentication endpoints
+│   │   │   └── stores.py            # Store management endpoints
+│   │   ├── k8s/
+│   │   │   ├── client.py             # Kubernetes API client
+│   │   │   ├── cluster.py            # Cluster operations
+│   │   │   ├── manifests.py          # Kubernetes resource manifests
+│   │   │   └── wait.py               # Resource readiness checks
+│   │   ├── services/
+│   │   │   ├── executor.py           # Background store operations
+│   │   │   └── provisioner.py        # Store provisioning/deletion
+│   │   ├── config.py                 # Application configuration
+│   │   ├── database.py               # SQLite database setup
+│   │   ├── deps.py                   # API dependencies
+│   │   ├── models.py                 # Database models
+│   │   ├── naming.py                 # Store/namespace naming
+│   │   ├── schemas.py                # API schemas
+│   │   ├── security.py               # Authentication/security
+│   │   └── main.py                   # FastAPI entry point
+│   ├── tests/                         # Backend and Kubernetes tests
+│   ├── Dockerfile                     # Backend container
+│   ├── requirements.txt               # Production dependencies
+│   ├── requirements-dev.txt           # Development dependencies
+│   ├── pytest.ini                     # Pytest configuration
+│   └── .env.example                   # Environment configuration template
+│
+├── frontend/                          # React + TypeScript dashboard
+│   ├── src/
+│   │   ├── components/                # Dashboard UI components
+│   │   ├── api.ts                     # Backend API client
+│   │   ├── hooks.ts                   # React hooks
+│   │   ├── types.ts                   # TypeScript types
+│   │   ├── App.tsx                    # Main application
+│   │   ├── App.test.tsx               # Frontend tests
+│   │   ├── main.tsx                   # Frontend entry point
+│   │   └── styles.css                 # Application styles
+│   ├── Dockerfile                     # Frontend container
+│   ├── nginx.conf                     # Nginx configuration
+│   ├── package.json                   # Frontend dependencies
+│   ├── package-lock.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── index.html
+│
+├── helm/
+│   └── store-factory/                 # Helm chart
+│       ├── templates/
+│       │   ├── _helpers.tpl
+│       │   ├── backend.yaml           # Backend deployment
+│       │   ├── frontend.yaml          # Frontend deployment
+│       │   └── rbac.yaml              # Kubernetes RBAC
+│       ├── Chart.yaml
+│       └── values.yaml
+│
+├── deploy/
+│   ├── k8s/
+│   │   └── values.yaml                # Standard Kubernetes configuration
+│   ├── k3s/
+│   │   └── values.yaml                # K3s configuration
+│   ├── kind-config.yaml               # Local Kind cluster
+│   └── README.md                      # Deployment instructions
+│
+├── docs/
+│   └── SYSTEM_DESIGN.md               # System architecture documentation
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                     # CI workflow
+│
+├── .gitignore
+└── README.md
+
 
 ```
+## Store lifecycle
 requested → provisioning → initializing → ready
                  ↓              ↓
                failed  ←────────┘        (retry → requested)
