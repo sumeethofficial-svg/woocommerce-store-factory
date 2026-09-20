@@ -19,87 +19,10 @@ Rules the code follows:
 5. Readiness is read from Kubernetes status. Nothing waits on a fixed sleep.
 6. Every create call tolerates "already exists", so provisioning can be re-run safely.
 7. Portable to any standard Kubernetes cluster. K3s is not a dependency.
-## Project Structure
 
-```text
-woocommerce-store-factory/
-├── backend/                         # FastAPI backend
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── auth.py              # Authentication endpoints
-│   │   │   └── stores.py            # Store management endpoints
-│   │   ├── k8s/
-│   │   │   ├── client.py             # Kubernetes API client
-│   │   │   ├── cluster.py            # Cluster operations
-│   │   │   ├── manifests.py          # Kubernetes resource manifests
-│   │   │   └── wait.py               # Resource readiness checks
-│   │   ├── services/
-│   │   │   ├── executor.py           # Background store operations
-│   │   │   └── provisioner.py        # Store provisioning/deletion
-│   │   ├── config.py                 # Application configuration
-│   │   ├── database.py               # SQLite database setup
-│   │   ├── deps.py                   # API dependencies
-│   │   ├── models.py                 # Database models
-│   │   ├── naming.py                 # Store/namespace naming
-│   │   ├── schemas.py                # API schemas
-│   │   ├── security.py               # Authentication/security
-│   │   └── main.py                   # FastAPI entry point
-│   ├── tests/                         # Backend and Kubernetes tests
-│   ├── Dockerfile                     # Backend container
-│   ├── requirements.txt               # Production dependencies
-│   ├── requirements-dev.txt           # Development dependencies
-│   ├── pytest.ini                     # Pytest configuration
-│   └── .env.example                   # Environment configuration template
-│
-├── frontend/                          # React + TypeScript dashboard
-│   ├── src/
-│   │   ├── components/                # Dashboard UI components
-│   │   ├── api.ts                     # Backend API client
-│   │   ├── hooks.ts                   # React hooks
-│   │   ├── types.ts                   # TypeScript types
-│   │   ├── App.tsx                    # Main application
-│   │   ├── App.test.tsx               # Frontend tests
-│   │   ├── main.tsx                   # Frontend entry point
-│   │   └── styles.css                 # Application styles
-│   ├── Dockerfile                     # Frontend container
-│   ├── nginx.conf                     # Nginx configuration
-│   ├── package.json                   # Frontend dependencies
-│   ├── package-lock.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   └── index.html
-│
-├── helm/
-│   └── store-factory/                 # Helm chart
-│       ├── templates/
-│       │   ├── _helpers.tpl
-│       │   ├── backend.yaml           # Backend deployment
-│       │   ├── frontend.yaml          # Frontend deployment
-│       │   └── rbac.yaml              # Kubernetes RBAC
-│       ├── Chart.yaml
-│       └── values.yaml
-│
-├── deploy/
-│   ├── k8s/
-│   │   └── values.yaml                # Standard Kubernetes configuration
-│   ├── k3s/
-│   │   └── values.yaml                # K3s configuration
-│   ├── kind-config.yaml               # Local Kind cluster
-│   └── README.md                      # Deployment instructions
-│
-├── docs/
-│   └── SYSTEM_DESIGN.md               # System architecture documentation
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml                     # CI workflow
-│
-├── .gitignore
-└── README.md
-
+## Store lifecycle
 
 ```
-## Store lifecycle
 requested → provisioning → initializing → ready
                  ↓              ↓
                failed  ←────────┘        (retry → requested)
@@ -149,15 +72,6 @@ Keys that do not start with `rzp_test_` stop the backend from starting. When bot
 
 If a key is missing, or the plugin cannot be installed, the Job carries on and the store still has Cash on delivery. `kubectl logs -n store-<name> job/wordpress-init` shows which step was skipped.
 
-To pay: choose the Razorpay option at checkout and use Razorpay's test details. UPI: `success@razorpay` succeeds and `failure@razorpay` fails. Test cards are listed in Razorpay's documentation. Which methods (including UPI) appear in the Razorpay window is controlled by your Razorpay test dashboard settings, so enable UPI there. The browser needs internet access to load Razorpay's checkout. Orders are marked paid from the browser callback. Razorpay webhooks need a public URL, so they are not set up for localhost.
-
-Manual setup if the plugin was not configured automatically: WordPress Admin → Plugins → Add New → "Razorpay for WooCommerce" → Install and Activate → WooCommerce → Settings → Payments → Razorpay → enable, paste the test Key ID and Key Secret, Save. Make sure the store currency is INR under WooCommerce → Settings → General.
-
-Provisioning order: namespace and quota → Secrets and ConfigMap → MySQL Service and StatefulSet → wait for MySQL → WordPress PVC, Deployment, Service, Ingress → wait for WordPress → WP-CLI Job → `ready`.
-
-Deletion removes the namespace, waits until it is gone, then marks the row `deleted`. A store name can be reused afterwards.
-
-Interrupted work resumes on backend start: stores left in `requested`, `provisioning`, `initializing` or `deleting` are picked up again.
 
 ## Run locally
 
@@ -248,27 +162,7 @@ Set in `backend/.env` or the environment. See `backend/.env.example`.
 
 Readiness timeouts and the poll interval are also configurable: `MYSQL_READY_TIMEOUT`, `WORDPRESS_READY_TIMEOUT`, `INIT_TIMEOUT`, `NAMESPACE_DELETE_TIMEOUT`, `POLL_INTERVAL_SECONDS`.
 
-## Tests
 
-```powershell
-cd backend
-pip install -r requirements-dev.txt
-pytest
-
-cd ../frontend
-npm test
-```
-
-Backend suite (121 tests):
-
-- Provisioning, idempotent re-runs, failure and retry, readiness timeouts, deletion, ownership isolation and resume after restart, against an in-memory fake of the Kubernetes API.
-- Contract tests: the real `kubernetes` client talks HTTP to a fake API server that rejects any manifest field not in the Kubernetes schema.
-- Limits and quota, the admin password flow (including that it never appears in responses), products, Razorpay, and upgrading an existing database.
-- The init script is syntax-checked, and the PHP scripts are executed against stubs of WordPress and WooCommerce when `php` is installed.
-
-Frontend suite (19 tests): the real dashboard with mocked `fetch` and fake timers, covering status polling (3s while a store is changing, 20s when idle), the usage summary, store cards, credentials, delete, and the Launch store dialog (password generation, products, storage limits, the submitted payload).
-
-These tests do not start pods. Only a real cluster can confirm that images pull and that WP-CLI installs WooCommerce, so run the steps in "Run locally" once against Kind.
 
 ## Deploy the factory itself
 
@@ -288,6 +182,5 @@ deploy/         Kind config, K8s and K3s values, deployment guide
 docs/           system design and build plan
 ```
 
-## Not included yet
 
-Prometheus and Grafana dashboards, and NetworkPolicies between store namespaces (Kind's default CNI does not enforce them).
+
