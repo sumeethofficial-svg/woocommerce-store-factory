@@ -2,7 +2,7 @@
 
 A Kubernetes-powered factory for launching fully isolated WooCommerce stores on demand, with automated provisioning, per-user quotas, and lifecycle management.
 
-![System design](docs/docs/system-design.png)
+![System design](docs/system-design.png)
 
 ## Architecture
 
