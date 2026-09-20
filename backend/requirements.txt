@@ -1,0 +1,11 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0,<3
+pydantic-settings>=2.4
+email-validator>=2.1
+PyJWT>=2.9
+bcrypt>=4.1
+python-multipart>=0.0.9
+kubernetes>=30
+python-dotenv>=1.0
+cryptography>=42

@@ -1,0 +1,141 @@
+{{- $name := include "store-factory.name" . -}}
+{{- $cfg := .Values.backend.config -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-backend
+  labels:
+    {{- include "store-factory.labels" . | nindent 4 }}
+type: Opaque
+data:
+  {{- $existing := lookup "v1" "Secret" .Release.Namespace (printf "%s-backend" $name) }}
+  {{- if .Values.backend.secretKey }}
+  SECRET_KEY: {{ .Values.backend.secretKey | b64enc | quote }}
+  {{- else if $existing }}
+  SECRET_KEY: {{ index $existing.data "SECRET_KEY" | quote }}
+  {{- else }}
+  SECRET_KEY: {{ randAlphaNum 48 | b64enc | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-backend-data
+  labels:
+    {{- include "store-factory.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.backend.persistence.storageClass }}
+  storageClassName: {{ .Values.backend.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.size }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-backend
+  labels:
+    {{- include "store-factory.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "store-factory.labels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      serviceAccountName: {{ $name }}
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $name }}-backend
+                  key: SECRET_KEY
+            - name: STORE_BASE_DOMAIN
+              value: {{ $cfg.storeBaseDomain | quote }}
+            - name: STORE_PUBLIC_PORT
+              value: {{ $cfg.storePublicPort | quote }}
+            - name: INGRESS_ENABLED
+              value: {{ $cfg.ingressEnabled | quote }}
+            - name: INGRESS_CLASS
+              value: {{ $cfg.ingressClass | quote }}
+            - name: STORAGE_CLASS
+              value: {{ $cfg.storageClass | quote }}
+            - name: WORDPRESS_IMAGE
+              value: {{ $cfg.wordpressImage | quote }}
+            - name: MAX_STORES_PER_USER
+              value: {{ $cfg.maxStoresPerUser | quote }}
+            - name: MAX_STORAGE_GI_PER_USER
+              value: {{ $cfg.maxStorageGiPerUser | quote }}
+            - name: MAX_STORE_STORAGE_GI
+              value: {{ $cfg.maxStoreStorageGi | quote }}
+            - name: SAMPLE_PRODUCTS
+              value: {{ $cfg.sampleProducts | quote }}
+            - name: STORE_CURRENCY
+              value: {{ $cfg.storeCurrency | quote }}
+            - name: STORE_COUNTRY
+              value: {{ $cfg.storeCountry | quote }}
+            {{- with .Values.backend.razorpay.existingSecret }}
+            - name: RAZORPAY_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: RAZORPAY_KEY_ID
+            - name: RAZORPAY_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: RAZORPAY_KEY_SECRET
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-backend-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-backend
+  labels:
+    {{- include "store-factory.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

@@ -1,0 +1,27 @@
+backend:
+  image:
+    repository: store-factory-backend
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+  persistence:
+    size: 1Gi
+    storageClass: local-path
+  config:
+    storeBaseDomain: 192.168.1.50.nip.io
+    storePublicPort: 80
+    ingressEnabled: true
+    ingressClass: traefik
+    storageClass: local-path
+  razorpay:
+    existingSecret: ""
+
+frontend:
+  image:
+    repository: store-factory-frontend
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: traefik
+  host: factory.192.168.1.50.nip.io

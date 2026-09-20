@@ -1,0 +1,49 @@
+backend:
+  image:
+    repository: store-factory-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  secretKey: ""
+  persistence:
+    size: 1Gi
+    storageClass: ""
+  config:
+    storeBaseDomain: localhost
+    storePublicPort: 80
+    ingressEnabled: true
+    ingressClass: nginx
+    storageClass: ""
+    wordpressImage: wordpress:latest
+    maxStoresPerUser: 3
+    maxStorageGiPerUser: 5
+    maxStoreStorageGi: 5
+    sampleProducts: false
+    storeCurrency: INR
+    storeCountry: IN:KA
+  razorpay:
+    existingSecret: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+frontend:
+  image:
+    repository: store-factory-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 96Mi
+
+ingress:
+  enabled: false
+  className: nginx
+  host: factory.localhost

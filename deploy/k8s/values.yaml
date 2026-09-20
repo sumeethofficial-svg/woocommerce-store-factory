@@ -1,0 +1,27 @@
+backend:
+  image:
+    repository: registry.example.com/store-factory-backend
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+  persistence:
+    size: 1Gi
+    storageClass: ""
+  config:
+    storeBaseDomain: stores.example.com
+    storePublicPort: 80
+    ingressEnabled: true
+    ingressClass: nginx
+    storageClass: ""
+  razorpay:
+    existingSecret: ""
+
+frontend:
+  image:
+    repository: registry.example.com/store-factory-frontend
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: nginx
+  host: factory.example.com
