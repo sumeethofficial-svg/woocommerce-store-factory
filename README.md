@@ -77,13 +77,18 @@ If a key is missing, or the plugin cannot be installed, the Job carries on and t
 
 Prerequisites: Python 3.12, Node 20+, Docker Desktop, `kubectl`, Kind.
 
-Cluster with ingress on host ports 80 and 443:
+Start the Kubernetes Cluster
+
+Create the local Kind cluster:
 
 ```powershell
 kind create cluster --name woocommerce-factory --config deploy/kind-config.yaml
-kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml
-kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
 ```
+Verify the cluster:
+```powershell
+kubectl get nodes
+```
+The node should show Ready.
 
 Backend:
 
