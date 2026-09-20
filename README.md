@@ -2,7 +2,7 @@
 
 A local-first cloud-native platform that lets a user launch and delete isolated WooCommerce stores through a React dashboard. Each store runs in its own Kubernetes namespace with its own MySQL database, its own admin password, and the products the user entered.
 
-![System design](docs/system-design.png)
+![System design](docs/docs/system-design.png)
 
 ## Architecture
 
