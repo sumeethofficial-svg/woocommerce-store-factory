@@ -1,6 +1,6 @@
 # WooCommerce Store Factory
 
-A local-first cloud-native platform that lets a user launch and delete isolated WooCommerce stores through a React dashboard. Each store runs in its own Kubernetes namespace with its own MySQL database, its own admin password, and the products the user entered.
+A Kubernetes-powered factory for launching fully isolated WooCommerce stores on demand, with automated provisioning, per-user quotas, and lifecycle management.
 
 ![System design](docs/docs/system-design.png)
 
